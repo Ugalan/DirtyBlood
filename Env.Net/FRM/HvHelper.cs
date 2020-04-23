@@ -14,9 +14,15 @@ namespace Env.Net.FRM
 {
     public class HvHelper
     {
+        string _revInfo;
         Socket clientSocket;
         CountdownEvent latch = new CountdownEvent(1);
         IPEndPoint _ip;
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="ipAddr">IP地址</param>
+        /// <param name="port">端口</param>
         public HvHelper(string ipAddr, int port)
         {
             _ip = new IPEndPoint(IPAddress.Parse(ipAddr), port);
@@ -74,6 +80,7 @@ namespace Env.Net.FRM
 
             // clientSocket.Shutdown(SocketShutdown.Both);
             // clientSocket.Close();
+            // latch.Signal();
             return buffer;
         }
 
@@ -88,56 +95,57 @@ namespace Env.Net.FRM
             return Encoding.UTF8.GetString(buffer, 0, byteLen);
         }
 
-        string _revInfo;
-        public void Recive(object o)
+        private void Recive(object o)
         {
             _revInfo = null;
             Socket socketSend = o as Socket;
-            int times = 0;
-            while (3 > times)
-            {
-                ++times;
-                try
-                {
-                    byte[] buffer = new byte[1024 * 1024]; // 1M
-                    int length = socketSend.Receive(buffer);
-                    if (length == 0)
-                        break;
-                    else
-                    {
-                        _revInfo = Encoding.UTF8.GetString(buffer, 0, length);
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                { }
-            }
-            // socketSend.Shutdown(SocketShutdown.Both);
-            // socketSend.Close();
-            // latch.Signal();
         }
 
+        /// <summary>
+        /// 获取所有Window信息
+        /// </summary>
+        /// <returns></returns>
         public string DumpAllWindowInfo()
         {
             return Send4Str("LIST");
         }
 
+        /// <summary>
+        /// 获取当前Window信息
+        /// </summary>
+        /// <returns></returns>
         public string DumpCurWindowAllNodeInfo()
         {
             return Send4Str("DUMP ffffffff");
         }
 
-
+        /// <summary>
+        /// 获取单个Window的所有节点信息
+        /// </summary>
+        /// <param name="hashCode"></param>
+        /// <returns></returns>
         public string DumpWindowAllNodeInfo(string hashCode)
         {
             return Send4Str($"DUMP {hashCode}");
         }
 
+        /// <summary>
+        /// 节点截图
+        /// </summary>
+        /// <param name="windowHashCode"></param>
+        /// <param name="ctrlClassName"></param>
+        /// <param name="ctrlClassHashCode"></param>
+        /// <returns></returns>
         public byte[] CaptureNode(string windowHashCode, string ctrlClassName, string ctrlClassHashCode)
         {
             return Send4Bys($"CAPTURE {windowHashCode} {ctrlClassName}@{ctrlClassHashCode}", out int byteLen);
         }
 
+        /// <summary>
+        /// 端口是否被占用
+        /// </summary>
+        /// <param name="port"></param>
+        /// <returns></returns>
         public static bool IsPortInUse(int port)
         {
             bool isUse = false;
@@ -154,6 +162,10 @@ namespace Env.Net.FRM
             return isUse;
         }
 
+        /// <summary>
+        /// 节点信息转换为XML
+        /// </summary>
+        /// <param name="nodeInfo"></param>
         public void DumpNodeToXml(string nodeInfo)
         {
             // string[] nodeArray = File.ReadAllLines(@"D:\dumpnode.txt");
@@ -167,6 +179,13 @@ namespace Env.Net.FRM
             // doc.Save(@"D:\xmlnode.xml");
         }
 
+        /// <summary>
+        /// 递归节点信息转换为XML
+        /// </summary>
+        /// <param name="nodeArray"></param>
+        /// <param name="lineNum"></param>
+        /// <param name="doc"></param>
+        /// <param name="parent"></param>
         public void DumpNodeToXml(string[] nodeArray, int lineNum, XmlDocument doc, XmlNode parent)
         {
             if (lineNum >= nodeArray.Length - 1)
@@ -194,6 +213,12 @@ namespace Env.Net.FRM
             }
         }
 
+        /// <summary>
+        /// 获取父节点
+        /// </summary>
+        /// <param name="num"></param>
+        /// <param name="node"></param>
+        /// <returns></returns>
         public XmlNode GetParentNode(int num, XmlNode node)
         {
             for (int i = num; i <= 0; i++)
@@ -203,6 +228,11 @@ namespace Env.Net.FRM
             return node;
         }
 
+        /// <summary>
+        /// 设置节点属性
+        /// </summary>
+        /// <param name="node"></param>
+        /// <param name="lineInfo"></param>
         public void SetNodeProperty(XmlElement node, string lineInfo)
         {
             List<string> lineList = lineInfo.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -220,6 +250,11 @@ namespace Env.Net.FRM
             }
         }
 
+        /// <summary>
+        /// 计算每行节点信息前面的空格，用以获取节点的层次结构
+        /// </summary>
+        /// <param name="strInfo"></param>
+        /// <returns></returns>
         public int SpaceCount(string strInfo)
         {
             for (int i = 0; i < strInfo.Length; i++)
